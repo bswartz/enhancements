@@ -14,7 +14,7 @@ approvers:
   - "@thockin"
   - "@saad-ali"
 creation-date: 2019-12-03
-last-updated: 2020-01-21
+last-updated: 2020-01-26
 status: provisional
 see-also:
 replaces:
@@ -33,16 +33,15 @@ superseded-by:
   - [Non-Goals](#non-goals)
 - [Proposal](#proposal)
   - [User Stories](#user-stories)
-    - [Story 1](#vm-images)
-    - [Story 2](#backuprestore)
+    - [VM Images](#vm-images)
+    - [Backup/Restore](#backuprestore)
   - [Implementation Details/Notes/Constraints](#implementation-detailsnotesconstraints)
   - [Risks and Mitigations](#risks-and-mitigations)
 - [Design Details](#design-details)
   - [Test Plan](#test-plan)
   - [Graduation Criteria](#graduation-criteria)
-    - [Examples](#examples)
-      - [Alpha -&gt; Beta Graduation](#alpha---beta-graduation)
-      - [Beta -&gt; GA Graduation](#beta---ga-graduation)
+    - [Alpha -&gt; Beta Graduation](#alpha---beta-graduation)
+    - [Beta -&gt; GA Graduation](#beta---ga-graduation)
   - [Upgrade / Downgrade Strategy](#upgrade--downgrade-strategy)
   - [Version Skew Strategy](#version-skew-strategy)
 - [Implementation History](#implementation-history)
@@ -256,26 +255,25 @@ the uses and implications of any populators they chose to install.
 
 ## Design Details
 
-TBD
-
 ### Test Plan
 
-TBD
+At a minimum, we'll want to have a simple and lightweight generic
+data populator used to test this functionality. The "hello world" populator
+proposed above could serve this purpose, or something similar.
+
+The point of the e2e tests would be to exercise the functionality of
+creating a PVC from a custom resource, to validate that the API
+functionality works, as well as all of the underlying features that would
+allow data populators in general to work.
 
 ### Graduation Criteria
 
-TBD
-
-#### Examples
-
-TBD
-
-##### Alpha -> Beta Graduation
+#### Alpha -> Beta Graduation
 
 - Need to see several implementations of working data populators that solve real world problems
 - Automated tests for at least one flavor of data population
 
-##### Beta -> GA Graduation
+#### Beta -> GA Graduation
 
 - Distributions including data populators as part of their distros (possibly
   a backup/restore implementation layered on top)
