@@ -95,8 +95,8 @@ feature gates for each object type. This approach won't scale to generic populat
 will by their nature be too numerous and varied.
 
 This proposal recommends that we relax validation on the `DataSource` field to allow
-arbitrary object types to be data sources, and leave the implementation to controllers. It
-includes example implementations to show why this is a safe thing to do.
+arbitrary object types to be data sources, and leave the implementation to controllers. This
+flexibility will allow us to experiment with approaches for data populators.
 
 ## Motivation
 
@@ -108,15 +108,8 @@ includes example implementations to show why this is a safe thing to do.
 
 ### Non-Goals
 
-- In the past it was suggested that we might implement volume taints/tolerations as
-  a mechanism to facilitate the populator pod attaching to the volume before an
-  end-user pod could do so. This proposal doesn't require that.
-- In the past it was suggested that Kubernetes might implement an end-user
-  accessible interface for rebinding PVC and PVs -- in particular for swapping
-  the bindings between a pair of bound PVCs. This proposal instead relies on
-  direct modification of the PV to do rebinding. We do not think end-users
-  need a way to rebind PVCs, because it's too hard to do safely in the general
-  case.
+- This proposal DOES NOT recommend any specific approach for data populators. The specific
+  design of how a data populator should work will be handled in a separate KEP.
 - We do not propose any new object types. Specifically, no special "populator"
   object type. Populators should function based on their own object types.
 
@@ -141,7 +134,8 @@ users and developers, but it's important to see these as a few examples among ma
 
 #### VM Images
 
-One use case was relevant to KubeVirt, where the Kubernetes `Pod` object is actually a
+One use case was relevant to [KubeVirt](https://kubevirt.io/), where the Kubernetes
+`Pod` object is actually a
 VM running in a hypervisor, and the `PVC` is actually a virtual disk attached to a VM.
 It's common for virtualization systems to allows VMs to boot from disks, and for disks
 to be pre-populated with various OS images. OS images tend to be stored in external
@@ -190,36 +184,10 @@ developers to add new types of data sources that the dynamic provisioners will
 simply ignore, enabling a different controller to see these objects and respond
 to them.
 
-The way I expect most data populators to work in practice is that they will see
-a request for a PVC `foo` with a data source of `bar`. The populator will create
-a shadow PVC `foo'` in another namespace with all of the same spec except the
-data source will be empty. The dynamic provisioner will ignore `foo` but will
-respond to `foo'` by creating an empty PV. The populator can create a pod
-attached to `foo'` and fill it with data pointed to by `bar` using whatever
-mechanism the developer chooses. After the volume is populated, the pod can be
-deleted, and the PV can be rebound to `foo`.
-
-A working example of the above approach is illustrated with a "hello world"
-prototype populator here:
-
-https://github.com/NetApp/hello-populator
-
-Other implementations are also possible, where the populator either works more
-closely with the dynamic provisioner, or goes around the CSI interface
-entirely to create the PV in a proprietary way. For example, there may be
-some kinds of data sources that we want to support in the CSI standard itself,
-but also allow for non-CSI things to populator as a fall-back. In this case
-the CRD that acts as the data source would need to include enough detail that
-the external-provisioner sidecar could decide whether to handle the request
-using CSI (perhaps through a capability query), or whether to ignore the
-request, so that some other fall-back controller could handle the request in
-a generic manner.
-
-An example of a more proprietary implementation would be
-an additional sidecar that implements features not yet part of CSI by talking
-directly to the storage controller. It's likely that brand new features will
-be delivered first as proprietary extensions before they become standardized
-and supported by the CSI spec and the community-supported sidecars.
+I will leave the details of how data populators will work for another KEP. There
+are a few possible implementation that are worth considering, and this change
+is a necessary step to enable prototyping those ideas and deciding which is
+the best approach.  
 
 ### Risks and Mitigations
 
@@ -232,9 +200,12 @@ and so would any other dynamic provisioner designed with forward compatibility
 in mind.
 
 Removing validation of the field relinquishes control over what kind of
-data sources are okay, and gives developers the freedom to decide. It's hard
-to see how giving developers freedom goes badly, but I'm willing to consider
-that it might.
+data sources are okay, and gives developers the freedom to decide. The biggest
+problem this leads to is that users might attempt to use a data source that's
+not supported (on a particular cluster), and they won't get any feedback
+telling them that their request will never succeed. This is not unlike a
+situation where a storage class refers to a provisioner that doesn't exist,
+but it's something that will need to be solved eventually. 
 
 Security issues are hard to measure, because any security issues would be the
 result of badly designed data populators that failed to put appropriate
@@ -257,21 +228,25 @@ the uses and implications of any populators they chose to install.
 
 ### Test Plan
 
-At a minimum, we'll want to have a simple and lightweight generic
-data populator used to test this functionality. The "hello world" populator
-proposed above could serve this purpose, or something similar.
-
-The point of the e2e tests would be to exercise the functionality of
-creating a PVC from a custom resource, to validate that the API
-functionality works, as well as all of the underlying features that would
-allow data populators in general to work.
+The minimal test for this feature is to create a PVC with a data source
+that's not a PVC or snapshot, and verify that the data source reference
+becomes part of the PVC API object. Any very simple CRD would be okay
+for this purpose. We would expect such a PVC to be ignored by existing
+dynamic provisioners.
 
 ### Graduation Criteria
 
 #### Alpha -> Beta Graduation
 
-- Need to see several implementations of working data populators that solve real world problems
-- Automated tests for at least one flavor of data population
+- Before going to beta, we need a clear notion of how data populators should
+  work.
+- We will need a simple and lightweight implementation of a data populator
+  that can be used by the E2E test suite to exercise the functionality.
+- Automated tests that create a volume from a data source handled by a
+  populator, to validate that the data source functionality works, and that
+  any other required functionality for data population is working.
+- We will need to see several implementations of working data populators that
+  solve real world problems implemented in the community.
 
 #### Beta -> GA Graduation
 
